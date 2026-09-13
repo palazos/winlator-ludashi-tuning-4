@@ -11,6 +11,18 @@ Winlator is an Android application that lets you to run Windows (x86_64) applica
 1. Download and install the APK (Winlator_7.1.apk) from [GitHub Releases](https://github.com/brunodev85/winlator/releases)
 2. Launch the app and wait for the installation process to finish
 
+# Building from source (Windows)
+
+The native Vulkan renderer compiles its shaders at build time using `glslangValidator`. On macOS/Linux CI this is installed via `brew install glslang` (see `codemagic.yaml`). On Windows there is no equivalent package, so `glslangValidator.exe` must be available on `PATH` before running Gradle:
+
+1. Download `glslang-main-windows-x86_64-release.zip` from the [glslang releases](https://github.com/KhronosGroup/glslang/releases/tag/main-tot) (Khronos Group).
+2. Extract it and copy/rename `bin/glslang.exe` to `glslangValidator.exe` (same CLI, newer name).
+3. Add that folder to `PATH` for the build session, e.g.:
+   ```powershell
+   $env:PATH = "<path-to-glslang>\bin;" + $env:PATH
+   ```
+4. Run `.\gradlew.bat assembleDebug` as usual.
+
 ----
 
 [![Play on Youtube](https://img.youtube.com/vi/8PKhmT7B3Xo/1.jpg)](https://www.youtube.com/watch?v=8PKhmT7B3Xo)
