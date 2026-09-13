@@ -1129,6 +1129,10 @@ public class XServerDisplayActivity extends AppCompatActivity {
 
         }
 
+        // Reserve controller slots before Wine starts so physical pads are visible
+        // without requiring a first user input event.
+        winHandler.preAssignConnectedControllers();
+
         environment.startEnvironmentComponents();
 
         winHandler.start();

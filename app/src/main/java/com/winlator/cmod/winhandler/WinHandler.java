@@ -2,6 +2,7 @@ package com.winlator.cmod.winhandler;
 
 import android.content.SharedPreferences;
 import android.util.Log;
+import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 
@@ -30,6 +31,8 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -84,7 +87,11 @@ public class WinHandler {
         this.inputManager = (InputManager) activity.getSystemService(Context.INPUT_SERVICE);
         this.inputDeviceListener = new InputManager.InputDeviceListener() {
             @Override
-            public void onInputDeviceAdded(int deviceId) {}
+            public void onInputDeviceAdded(int deviceId) {
+                // Hotplug path: assign a slot as soon as Android reports the controller,
+                // instead of waiting for the first button/axis event.
+                assignConnectedDeviceIfPossible(deviceId, "hotplug");
+            }
 
             @Override
             public void onInputDeviceRemoved(int deviceId) {
@@ -99,6 +106,81 @@ public class WinHandler {
         for (int i = 0; i < MAX_CONTROLLERS; i++) {
             vibrationEnabledSlots[i] = preferences.getBoolean("vibration_slot_" + i, true);
         }
+    }
+
+    /**
+     * Pre-assign connected Android gamepads to slots before Wine startup.
+     * This removes the need for a first user input just to create slot bindings.
+     */
+    public int preAssignConnectedControllers() {
+        if (fakeInputBasePath == null || fakeInputBasePath.isEmpty()) {
+            Log.w("WinHandler", "Skipping pre-assignment: fake input path is not set yet.");
+            return 0;
+        }
+
+        int assignedCount = 0;
+        for (int deviceId : getConnectedGamepadDeviceIds()) {
+            if (usedSlots.size() >= MAX_CONTROLLERS) {
+                break;
+            }
+            if (assignConnectedDeviceIfPossible(deviceId, "startup-scan")) {
+                assignedCount++;
+            }
+        }
+
+        Log.d("WinHandler", "Pre-assigned " + assignedCount + " controller(s) before Wine startup.");
+        return assignedCount;
+    }
+
+    private int[] getConnectedGamepadDeviceIds() {
+        int[] deviceIds = InputDevice.getDeviceIds();
+        Integer[] sortedIds = new Integer[deviceIds.length];
+        for (int i = 0; i < deviceIds.length; i++) {
+            sortedIds[i] = deviceIds[i];
+        }
+
+        // Stable ordering keeps slot assignment predictable across launches.
+        Arrays.sort(sortedIds, Comparator
+                .comparing((Integer id) -> {
+                    InputDevice device = InputDevice.getDevice(id);
+                    String descriptor = device != null ? device.getDescriptor() : "";
+                    return descriptor != null ? descriptor : "";
+                })
+                .thenComparingInt(Integer::intValue));
+
+        int[] result = new int[sortedIds.length];
+        for (int i = 0; i < sortedIds.length; i++) {
+            result[i] = sortedIds[i];
+        }
+        return result;
+    }
+
+    private boolean assignConnectedDeviceIfPossible(int deviceId, String source) {
+        if (deviceToSlot.containsKey(deviceId)) {
+            return false;
+        }
+
+        if (usedSlots.size() >= MAX_CONTROLLERS) {
+            Log.d("WinHandler", "Ignoring device " + deviceId + " from " + source + ": slot limit reached.");
+            return false;
+        }
+
+        InputDevice device = InputDevice.getDevice(deviceId);
+        if (!ExternalController.isGameController(device)) {
+            return false;
+        }
+
+        ExternalController controller = getController(deviceId);
+        if (controller == null) {
+            return false;
+        }
+
+        int slot = assignSlot(deviceId);
+        if (slot >= 0) {
+            Log.d("WinHandler", "Auto-assigned device " + deviceId + " to slot " + slot + " via " + source + ".");
+            return true;
+        }
+        return false;
     }
 
     private boolean sendPacket(int port) {
