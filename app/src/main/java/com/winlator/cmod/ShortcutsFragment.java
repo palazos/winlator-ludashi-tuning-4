@@ -47,6 +47,8 @@ import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.ui.shortcut.ShortcutSettingsComposeDialog;
 import com.winlator.cmod.core.ExeIconExtractor;
 import com.winlator.cmod.core.FileUtils;
+import com.winlator.cmod.games.ScanGamesController;
+import com.winlator.cmod.games.TreeUriResolver;
 import com.winlator.cmod.ui.library.LibraryCallbacks;
 import com.winlator.cmod.ui.library.LibraryComposeBinding;
 import com.winlator.cmod.ui.library.LibraryComposeController;
@@ -90,6 +92,8 @@ public class ShortcutsFragment extends Fragment {
     private static final int MENU_HORIZONTAL_MODE = 7;
     private static final int MENU_GROUP_LOCK = 8;
     private static final int MENU_GROUP_ORIENTATION_MODE = 9;
+    private static final int MENU_SCAN_GAMES = 10;
+    private static final int MENU_REMOVE_ALL_SHORTCUTS = 11;
     private static final String STEAMGRID_BASE_URL = "https://www.steamgriddb.com/api/v2/";
     private static String STEAMGRID_API_KEY = "0324c52513634547a7b32d6d323635d0";
 
@@ -104,6 +108,7 @@ public class ShortcutsFragment extends Fragment {
     private Shortcut shortcutForIconUpdate;
     private ActivityResultLauncher<String> iconPickerLauncher;
     private ActivityResultLauncher<String> contentPickerLauncher;
+    private ActivityResultLauncher<Uri> gameFolderPickerLauncher;
     private com.winlator.cmod.core.Callback<Uri> pendingContentPickerCallback;
 
     public static final int IMPORT_SHORTCUT = 1005;
@@ -123,6 +128,34 @@ public class ShortcutsFragment extends Fragment {
             pendingContentPickerCallback = null;
             if (cb != null) cb.call(uri);
         });
+        gameFolderPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenDocumentTree(),
+                uri -> {
+                    if (uri == null) return;
+                    if (getActivity() == null || !isAdded()) return;
+                    try {
+                        requireContext().getContentResolver().takePersistableUriPermission(
+                                uri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    } catch (Exception ignored) {}
+                    File folder = TreeUriResolver.resolveToFile(requireContext(), uri);
+                    if (folder == null) {
+                        Toast.makeText(getContext(),
+                                "This folder isn't reachable as a regular path. Pick one on internal storage or an SD card.",
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    if (preferences != null) {
+                        preferences.edit()
+                                .putString("games_root_uri", uri.toString())
+                                .putString("games_root_path", folder.getAbsolutePath())
+                                .apply();
+                    }
+                    // Fresh load so the picker always sees the current container list.
+                    manager = new ContainerManager(requireActivity());
+                    new ScanGamesController(requireActivity(), manager, this::loadShortcutsList)
+                            .startWithFolder(folder);
+                });
     }
 
     public void pickContentArchive(com.winlator.cmod.core.Callback<Uri> callback) {
@@ -253,6 +286,11 @@ public class ShortcutsFragment extends Fragment {
                 .setChecked(activity.isHorizontalModeEnabled());
         moreMenu.setGroupCheckable(MENU_GROUP_LOCK, true, false);
         moreMenu.setGroupCheckable(MENU_GROUP_ORIENTATION_MODE, true, true);
+
+        moreMenu.add(0, MENU_SCAN_GAMES, 3, getString(R.string.scan_games))
+                .setIcon(R.drawable.ui_ic_search);
+        moreMenu.add(0, MENU_REMOVE_ALL_SHORTCUTS, 4, getString(R.string.remove_all_shortcuts))
+                .setIcon(R.drawable.ui_ic_delete);
     }
 
     @Override
@@ -282,7 +320,62 @@ public class ShortcutsFragment extends Fragment {
             activity.toggleHorizontalMode();
             return true;
         }
+        if (item.getItemId() == MENU_SCAN_GAMES) {
+            Uri lastUri = null;
+            if (preferences != null) {
+                String stored = preferences.getString("games_root_uri", null);
+                if (stored != null) {
+                    try { lastUri = Uri.parse(stored); } catch (Exception ignored) {}
+                }
+            }
+            gameFolderPickerLauncher.launch(lastUri);
+            return true;
+        }
+        if (item.getItemId() == MENU_REMOVE_ALL_SHORTCUTS) {
+            confirmRemoveAllShortcuts();
+            return true;
+        }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void confirmRemoveAllShortcuts() {
+        Context context = getContext();
+        if (context == null || manager == null) return;
+
+        ArrayList<Shortcut> shortcuts = manager.loadShortcuts();
+        shortcuts.removeIf(s -> s == null || s.file == null || s.file.getName().isEmpty());
+        if (shortcuts.isEmpty()) {
+            Toast.makeText(context, R.string.remove_all_shortcuts_none, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ContentDialog.confirm(context, R.string.do_you_want_to_remove_all_shortcuts, () -> {
+            int removed = 0;
+            for (Shortcut shortcut : shortcuts) {
+                if (deleteShortcutFiles(shortcut)) removed++;
+            }
+            loadShortcutsList();
+            Toast.makeText(context,
+                    getString(R.string.remove_all_shortcuts_summary, removed),
+                    Toast.LENGTH_LONG).show();
+        });
+    }
+
+    /** Deletes the .desktop and sibling .lnk/.bat files; returns true if the desktop file was removed. */
+    private boolean deleteShortcutFiles(Shortcut shortcut) {
+        if (shortcut == null || shortcut.file == null) return false;
+        boolean fileDeleted = shortcut.file.delete();
+        try {
+            String path = shortcut.file.getPath();
+            int dot = path.lastIndexOf('.');
+            if (dot > 0) {
+                String basePath = path.substring(0, dot);
+                new File(basePath + ".lnk").delete();
+                new File(basePath + ".bat").delete();
+            }
+        } catch (Exception ignored) {}
+        if (fileDeleted) disableShortcutOnScreen(requireContext(), shortcut);
+        return fileDeleted;
     }
 
     private void setGridView(boolean gridView) {
@@ -651,15 +744,7 @@ public class ShortcutsFragment extends Fragment {
         }
         else if (LibraryComposeHost.ACTION_REMOVE.equals(action)) {
             ContentDialog.confirm(context, R.string.do_you_want_to_remove_this_shortcut, () -> {
-                boolean fileDeleted = shortcut.file.delete();
-                try {
-                    String basePath = shortcut.file.getPath().substring(0, shortcut.file.getPath().lastIndexOf("."));
-                    new File(basePath + ".lnk").delete();
-                    new File(basePath + ".bat").delete();
-                } catch (Exception ignored) {}
-
-                if (fileDeleted) {
-                    disableShortcutOnScreen(requireContext(), shortcut);
+                if (deleteShortcutFiles(shortcut)) {
                     loadShortcutsList();
                     Toast.makeText(context, "Shortcut removed.", Toast.LENGTH_SHORT).show();
                 }
