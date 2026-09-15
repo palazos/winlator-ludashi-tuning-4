@@ -29,6 +29,18 @@ This build mimics the package name of Genshin Impact. This is specifically desig
 1.  Download and install the latest APK from this repository's [Releases section](https://github.com/StevenMXZ/Winlator-Ludashi/releases) (choose your preferred build: `dev-vanilla`, `ludashi`, or `redmagic`).
 2.  Launch the app and wait for the installation process to finish.
 
+# Building from source (Windows)
+
+The native Vulkan renderer compiles its shaders at build time using `glslangValidator`. On Linux CI this is installed via `apt-get install glslang-tools` (see `.github/workflows/build.yml`). On Windows there is no equivalent package, so `glslangValidator.exe` must be available on `PATH` before running Gradle:
+
+1. Download `glslang-main-windows-x86_64-release.zip` from the [glslang releases](https://github.com/KhronosGroup/glslang/releases/tag/main-tot) (Khronos Group).
+2. Extract it and copy/rename `bin/glslang.exe` to `glslangValidator.exe` (same CLI, newer name).
+3. Add that folder to `PATH` for the build session, e.g.:
+   ```powershell
+   $env:PATH = "<path-to-glslang>\bin;" + $env:PATH
+   ```
+4. Run `.\gradlew.bat assembleDebug` as usual.
+
 # Useful Tips
 
   - Here is a tutorial from ZeroKimchi channel on how to use Winlator Bionic:
