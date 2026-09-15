@@ -230,6 +230,11 @@ public class ShortcutsFragment extends Fragment {
                         Shortcut shortcut = findShortcut(shortcutPath);
                         if (shortcut != null) requestArtwork(shortcut, kind);
                     }
+
+                    @Override
+                    public void onScanGames() {
+                        launchGameFolderPicker();
+                    }
                 }
         );
         libraryController = binding.getController();
@@ -321,14 +326,7 @@ public class ShortcutsFragment extends Fragment {
             return true;
         }
         if (item.getItemId() == MENU_SCAN_GAMES) {
-            Uri lastUri = null;
-            if (preferences != null) {
-                String stored = preferences.getString("games_root_uri", null);
-                if (stored != null) {
-                    try { lastUri = Uri.parse(stored); } catch (Exception ignored) {}
-                }
-            }
-            gameFolderPickerLauncher.launch(lastUri);
+            launchGameFolderPicker();
             return true;
         }
         if (item.getItemId() == MENU_REMOVE_ALL_SHORTCUTS) {
@@ -336,6 +334,18 @@ public class ShortcutsFragment extends Fragment {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    /** Opens the SAF folder picker that kicks off the "Scan games" flow. */
+    private void launchGameFolderPicker() {
+        Uri lastUri = null;
+        if (preferences != null) {
+            String stored = preferences.getString("games_root_uri", null);
+            if (stored != null) {
+                try { lastUri = Uri.parse(stored); } catch (Exception ignored) {}
+            }
+        }
+        gameFolderPickerLauncher.launch(lastUri);
     }
 
     private void confirmRemoveAllShortcuts() {

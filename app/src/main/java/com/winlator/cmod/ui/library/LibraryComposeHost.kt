@@ -37,6 +37,7 @@ interface LibraryCallbacks {
     fun onGridViewChanged(gridView: Boolean)
     fun onAction(shortcutPath: String, action: String)
     fun onArtworkNeeded(shortcutPath: String, kind: String)
+    fun onScanGames()
 }
 
 class LibraryComposeController internal constructor(

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -59,34 +61,61 @@ internal fun LibraryRootWithoutEmptyDescription(
             EmptyFilterChip("Recent", false)
         }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Surface(
-                onClick = { activity?.navigateToMainDestination(R.id.main_menu_file_manager) },
-                modifier = Modifier.fillMaxWidth(0.90f).widthIn(max = 320.dp),
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            Row(
+                modifier = Modifier.fillMaxWidth(0.90f).widthIn(max = 520.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 28.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Surface(
-                        modifier = Modifier.size(72.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Outlined.Add, null, modifier = Modifier.size(34.dp))
-                        }
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        "Add games",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                EmptyStateActionCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Outlined.Add,
+                    label = "Add games",
+                    onClick = { activity?.navigateToMainDestination(R.id.main_menu_file_manager) }
+                )
+                EmptyStateActionCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Outlined.Search,
+                    label = "Scan games",
+                    onClick = { callbacks.onScanGames() }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun EmptyStateActionCard(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Surface(
+                modifier = Modifier.size(72.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, null, modifier = Modifier.size(34.dp))
                 }
             }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
         }
     }
 }

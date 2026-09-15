@@ -38,6 +38,7 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.ViewList
@@ -169,27 +170,22 @@ internal fun LibraryRoot(
                 }
             } else {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Surface(
-                        onClick = { activity?.navigateToMainDestination(R.id.main_menu_file_manager) },
-                        modifier = Modifier.widthIn(max = 360.dp).fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    Row(
+                        modifier = Modifier.widthIn(max = 520.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column(
-                            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 28.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Surface(
-                                modifier = Modifier.size(72.dp),
-                                shape = RoundedCornerShape(20.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant
-                            ) {
-                                Box(contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Add, null, modifier = Modifier.size(34.dp)) }
-                            }
-                            Spacer(Modifier.height(16.dp))
-                            Text("Add games", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        }
+                        EmptyStateActionCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Outlined.Add,
+                            label = "Add games",
+                            onClick = { activity?.navigateToMainDestination(R.id.main_menu_file_manager) }
+                        )
+                        EmptyStateActionCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Outlined.Search,
+                            label = "Scan games",
+                            onClick = { cb.onScanGames() }
+                        )
                     }
                 }
             }
