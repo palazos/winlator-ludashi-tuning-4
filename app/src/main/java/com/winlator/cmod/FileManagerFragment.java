@@ -43,6 +43,7 @@ import com.winlator.cmod.core.ExeIconExtractor;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.StringUtils;
 import com.winlator.cmod.core.WineUtils;
+import com.winlator.cmod.games.ScanGamesController;
 import com.winlator.cmod.ui.FileManagerLandscapeNavHost;
 import com.winlator.cmod.ui.theme.WinlatorLegacyTheme;
 import com.winlator.cmod.xenvironment.ImageFs;
@@ -1102,6 +1103,16 @@ public class FileManagerFragment extends Fragment {
             });
             popup.getMenu().add("Add this game").setOnMenuItemClickListener(item -> {
                 performContainerAction(file, container -> createShortcutDirectly(file, container));
+                return true;
+            });
+        }
+        if (file.isDirectory()) {
+            popup.getMenu().add(R.string.scan_games_this_folder).setOnMenuItemClickListener(item -> {
+                // Jump back to Library once shortcuts are created so the user immediately
+                // sees the result; Library reloads its list as soon as its view is recreated.
+                new ScanGamesController(requireActivity(), containerManager, () -> {
+                    if (isAdded()) getParentFragmentManager().popBackStack();
+                }).startWithFolder(file);
                 return true;
             });
         }

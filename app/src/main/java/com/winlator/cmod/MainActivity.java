@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
@@ -413,12 +414,31 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
+    /**
+     * No screen in the app ever wants the bottom navigation or the main
+     * Toolbar visible while in landscape - every landscape screen renders
+     * its own Compose header/nav instead. Every caller of these setters
+     * still computes its own "should be visible" flag based on
+     * orientation (kept as-is to avoid touching ~7 files), but since
+     * MainActivity doesn't get recreated on rotation
+     * (configChanges includes "orientation"), those checks can race with
+     * each other across fragment/Compose lifecycle transitions and briefly
+     * leave the wrong chrome visible. Enforcing the invariant here, in the
+     * single place that actually mutates the views, closes that race for
+     * good regardless of which screen "wins".
+     */
+    private boolean isLandscapeOrientation() {
+        return getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
+    }
+
     public void setBottomNavigationVisible(boolean visible) {
-        if (bottomNavigation != null) bottomNavigation.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (bottomNavigation == null) return;
+        bottomNavigation.setVisibility((visible && !isLandscapeOrientation()) ? View.VISIBLE : View.GONE);
     }
 
     public void setMainToolbarVisible(boolean visible) {
-        if (mainToolbar != null) mainToolbar.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (mainToolbar == null) return;
+        mainToolbar.setVisibility((visible && !isLandscapeOrientation()) ? View.VISIBLE : View.GONE);
     }
 
     public void navigateToMainDestination(int menuItemId) {

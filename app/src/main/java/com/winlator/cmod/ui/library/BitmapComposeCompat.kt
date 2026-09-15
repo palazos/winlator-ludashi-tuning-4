@@ -112,8 +112,18 @@ internal fun LibraryRoot(
         activity?.setBottomNavigationVisible(!landscape)
         activity?.setMainToolbarVisible(!landscape)
         onDispose {
-            activity?.setBottomNavigationVisible(true)
-            activity?.setMainToolbarVisible(true)
+            // MainActivity replaces ShortcutsFragment with a brand new instance on every
+            // navigation to Library (no back stack), so the old and new instances can
+            // briefly overlap during the Fragment transition. If a newer Library screen
+            // is already the one showing, let it keep owning the toolbar/nav visibility
+            // instead of resetting it here - otherwise the Activity toolbar flashes back
+            // on top of the Compose header (the "double bar" glitch).
+            val stillOnLibrary = activity?.supportFragmentManager
+                ?.findFragmentById(R.id.FLFragmentContainer) is com.winlator.cmod.ShortcutsFragment
+            if (!stillOnLibrary) {
+                activity?.setBottomNavigationVisible(true)
+                activity?.setMainToolbarVisible(true)
+            }
         }
     }
 
@@ -128,7 +138,9 @@ internal fun LibraryRoot(
                     activity = activity,
                     grid = grid,
                     onArtwork = true,
-                    onGridViewChanged = cb::onGridViewChanged
+                    onGridViewChanged = cb::onGridViewChanged,
+                    onScanGames = cb::onScanGames,
+                    onRemoveAllShortcuts = cb::onRemoveAllShortcuts
                 )
                 Spacer(Modifier.height(7.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -151,7 +163,9 @@ internal fun LibraryRoot(
                 activity = activity,
                 grid = grid,
                 onArtwork = false,
-                onGridViewChanged = cb::onGridViewChanged
+                onGridViewChanged = cb::onGridViewChanged,
+                onScanGames = cb::onScanGames,
+                onRemoveAllShortcuts = cb::onRemoveAllShortcuts
             )
             Spacer(Modifier.height(7.dp))
         }
@@ -210,7 +224,9 @@ private fun LibraryLandscapeHeader(
     activity: MainActivity?,
     grid: Boolean,
     onArtwork: Boolean,
-    onGridViewChanged: (Boolean) -> Unit
+    onGridViewChanged: (Boolean) -> Unit,
+    onScanGames: () -> Unit,
+    onRemoveAllShortcuts: () -> Unit
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
@@ -224,6 +240,8 @@ private fun LibraryLandscapeHeader(
             onGridViewChanged(!grid)
         }
         LibraryTopIcon(Icons.Outlined.Add, false) { activity?.navigateToMainDestination(R.id.main_menu_file_manager) }
+        LibraryTopIcon(Icons.Outlined.Search, false) { onScanGames() }
+        LibraryTopIcon(Icons.Outlined.DeleteOutline, false) { onRemoveAllShortcuts() }
         LibraryTopIcon(Icons.Outlined.Home, true) {}
         LibraryTopIcon(Icons.Outlined.SportsEsports, false) { activity?.navigateToMainDestination(R.id.main_menu_input_controls) }
         LibraryTopIcon(Icons.Outlined.Settings, false) { activity?.navigateToMainDestination(R.id.main_menu_settings) }

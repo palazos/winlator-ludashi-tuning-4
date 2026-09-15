@@ -38,6 +38,7 @@ interface LibraryCallbacks {
     fun onAction(shortcutPath: String, action: String)
     fun onArtworkNeeded(shortcutPath: String, kind: String)
     fun onScanGames()
+    fun onRemoveAllShortcuts()
 }
 
 class LibraryComposeController internal constructor(

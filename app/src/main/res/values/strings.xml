@@ -344,6 +344,7 @@
     <string name="shortcut_not_available">This shortcut is no longer available. Please delete or recreate it.</string>
     <string name="up">Up</string>
     <string name="scan_games">Scan games (AI)</string>
+    <string name="scan_games_this_folder">Scan games in this folder</string>
     <string name="remove_all_shortcuts">Remove all shortcuts</string>
     <string name="remove_all_shortcuts_none">There are no shortcuts to remove.</string>
     <string name="remove_all_shortcuts_summary">%1$d shortcut(s) removed.</string>

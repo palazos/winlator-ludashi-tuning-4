@@ -102,6 +102,7 @@ public class ShortcutsFragment extends Fragment {
     private LibraryComposeController libraryController;
     
     private boolean isGridView = false;
+    private boolean skipNextMenuInvalidate = true;
     private final ArrayList<Shortcut> allShortcuts = new ArrayList<>();
     private final Set<String> artworkRequests = Collections.synchronizedSet(new HashSet<>());
 
@@ -172,6 +173,10 @@ public class ShortcutsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         manager = new ContainerManager(getContext());
+        // The very first load for this view will be picked up by the normal
+        // onCreateOptionsMenu() pass, so skip the extra invalidate() there to
+        // avoid a visible toolbar flash every time this screen is (re)entered.
+        skipNextMenuInvalidate = true;
         loadShortcutsList();
         if (getActivity() != null && ((AppCompatActivity) getActivity()).getSupportActionBar() != null) {
             ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(R.string.library);
@@ -233,7 +238,12 @@ public class ShortcutsFragment extends Fragment {
 
                     @Override
                     public void onScanGames() {
-                        launchGameFolderPicker();
+                        launchScanGames();
+                    }
+
+                    @Override
+                    public void onRemoveAllShortcuts() {
+                        confirmRemoveAllShortcuts();
                     }
                 }
         );
@@ -274,8 +284,21 @@ public class ShortcutsFragment extends Fragment {
         addItem.setIcon(R.drawable.ui_ic_add);
         addItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
+        // Scan games / Remove all shortcuts only make sense once the library already
+        // has shortcuts; when it's empty those actions are offered via the empty-state
+        // cards instead, so keep the toolbar uncluttered until then.
+        if (!allShortcuts.isEmpty()) {
+            MenuItem scanItem = menu.add(0, MENU_SCAN_GAMES, 3, getString(R.string.scan_games));
+            scanItem.setIcon(R.drawable.ui_ic_storage);
+            scanItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+
+            MenuItem removeAllItem = menu.add(0, MENU_REMOVE_ALL_SHORTCUTS, 4, getString(R.string.remove_all_shortcuts));
+            removeAllItem.setIcon(R.drawable.ui_ic_delete);
+            removeAllItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        }
+
         MainActivity activity = (MainActivity) requireActivity();
-        SubMenu moreMenu = menu.addSubMenu(0, MENU_MORE, 3, "More");
+        SubMenu moreMenu = menu.addSubMenu(0, MENU_MORE, 5, "More");
         MenuItem moreItem = moreMenu.getItem();
         moreItem.setIcon(R.drawable.ui_ic_more);
         moreItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
@@ -291,11 +314,6 @@ public class ShortcutsFragment extends Fragment {
                 .setChecked(activity.isHorizontalModeEnabled());
         moreMenu.setGroupCheckable(MENU_GROUP_LOCK, true, false);
         moreMenu.setGroupCheckable(MENU_GROUP_ORIENTATION_MODE, true, true);
-
-        moreMenu.add(0, MENU_SCAN_GAMES, 3, getString(R.string.scan_games))
-                .setIcon(R.drawable.ui_ic_search);
-        moreMenu.add(0, MENU_REMOVE_ALL_SHORTCUTS, 4, getString(R.string.remove_all_shortcuts))
-                .setIcon(R.drawable.ui_ic_delete);
     }
 
     @Override
@@ -305,11 +323,11 @@ public class ShortcutsFragment extends Fragment {
             return true;
         }
         if (item.getItemId() == MENU_FILE_MANAGER) {
-            getParentFragmentManager().beginTransaction()
-                    .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down)
-                    .addToBackStack(null)
-                    .replace(R.id.FLFragmentContainer, new FileManagerFragment())
-                    .commit();
+            openFileManager();
+            return true;
+        }
+        if (item.getItemId() == MENU_SCAN_GAMES) {
+            launchScanGames();
             return true;
         }
         MainActivity activity = (MainActivity) requireActivity();
@@ -325,10 +343,6 @@ public class ShortcutsFragment extends Fragment {
             activity.toggleHorizontalMode();
             return true;
         }
-        if (item.getItemId() == MENU_SCAN_GAMES) {
-            launchGameFolderPicker();
-            return true;
-        }
         if (item.getItemId() == MENU_REMOVE_ALL_SHORTCUTS) {
             confirmRemoveAllShortcuts();
             return true;
@@ -336,8 +350,20 @@ public class ShortcutsFragment extends Fragment {
         return super.onOptionsItemSelected(item);
     }
 
-    /** Opens the SAF folder picker that kicks off the "Scan games" flow. */
-    private void launchGameFolderPicker() {
+    /** Opens the in-app File Manager (used by "Open File Manager"). */
+    private void openFileManager() {
+        getParentFragmentManager().beginTransaction()
+                .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down)
+                .addToBackStack(null)
+                .replace(R.id.FLFragmentContainer, new FileManagerFragment())
+                .commit();
+    }
+
+    /**
+     * Opens the system folder picker (SAF) that kicks off the "Scan games"
+     * flow directly from Library, same as at the start of this feature.
+     */
+    private void launchScanGames() {
         Uri lastUri = null;
         if (preferences != null) {
             String stored = preferences.getString("games_root_uri", null);
@@ -531,6 +557,7 @@ public class ShortcutsFragment extends Fragment {
     }
 
     public void loadShortcutsList() {
+        boolean hadShortcuts = !allShortcuts.isEmpty();
         ArrayList<Shortcut> shortcuts = manager.loadShortcuts();
         allShortcuts.clear();
         if (shortcuts != null) {
@@ -542,6 +569,15 @@ public class ShortcutsFragment extends Fragment {
             allShortcuts.addAll(shortcuts);
         }
         publishLibraryItems();
+        // Scan games / Remove all shortcuts toggle visibility depending on whether the
+        // library is empty, so refresh the toolbar whenever that flips while this
+        // screen is already visible. Skip it right after the view is (re)created,
+        // since onCreateOptionsMenu() already builds the menu with fresh data then
+        // and an extra invalidate() would just cause a visible flash.
+        if (!skipNextMenuInvalidate && hadShortcuts != !allShortcuts.isEmpty() && isAdded()) {
+            requireActivity().invalidateOptionsMenu();
+        }
+        skipNextMenuInvalidate = false;
     }
 
     private Shortcut findShortcut(String shortcutPath) {
