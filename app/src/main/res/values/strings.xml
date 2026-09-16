@@ -352,10 +352,6 @@
     <string name="scan_games_select_folder">Select this folder</string>
     <string name="scan_games_pick_containers">Pick containers</string>
     <string name="scan_games_pick_containers_msg">Choose which containers should receive the detected shortcuts.</string>
-    <string name="scan_games_drive_letter">Drive letter</string>
-    <string name="scan_games_no_free_letter">No free drive letter is available.</string>
-    <string name="scan_games_overwrite_letter_title">Letter already in use</string>
-    <string name="scan_games_overwrite_letter_msg">Drive %1$s is already mapped to a different path in one or more containers. Overwrite it with the games folder?</string>
     <string name="scan_games_progress_title">Scanning games…</string>
     <string name="scan_games_resolving">Identifying games, this can take a moment…</string>
     <string name="scan_games_no_results">No games were found in the selected folder.</string>

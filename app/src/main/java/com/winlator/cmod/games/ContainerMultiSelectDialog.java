@@ -12,7 +12,9 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.container.Container;
+import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.Callback;
+import com.winlator.cmod.core.WineInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,10 +50,18 @@ public class ContainerMultiSelectDialog {
             return;
         }
 
+        // Containers are listed by their Wine/Proton runtime instead of their
+        // (often generic) container name, since that's what actually matters
+        // when picking where a scanned game should get a shortcut.
+        ContentsManager contentsManager = new ContentsManager(context);
+        contentsManager.syncContents();
+
         String[] names = new String[containers.size()];
         final boolean[] checked = new boolean[containers.size()];
         for (int i = 0; i < containers.size(); i++) {
-            names[i] = containers.get(i).getName();
+            Container container = containers.get(i);
+            WineInfo wineInfo = WineInfo.fromIdentifier(context, contentsManager, container.getWineVersion());
+            names[i] = wineInfo.toString();
             checked[i] = true;
         }
 

@@ -32,13 +32,15 @@ import java.util.concurrent.Executors;
 
 /**
  * End-to-end UI flow for the "Scan games" feature:
- * folder picker -> containers picker -> drive letter -> background scan
- * (folder walk + heuristic resolution) -> results checklist -> batch
- * shortcut creation with per-container drive merge.
+ * folder picker -> containers picker -> background scan (folder walk +
+ * heuristic resolution) -> results checklist -> batch shortcut creation
+ * with per-container drive merge. The games folder is always mapped to
+ * drive G: in every target container, overwriting any previous mapping
+ * for that letter without asking for confirmation.
  */
 public class ScanGamesController {
+    private static final char GAMES_DRIVE_LETTER = 'G';
     private static final String PREF_LAST_FOLDER = "games_root_path";
-    private static final String PREF_LAST_LETTER = "games_drive_letter";
 
     private final Context context;
     private final ContainerManager manager;
@@ -89,26 +91,10 @@ public class ScanGamesController {
 
     private void onContainersPicked(File folder, List<Container> selected) {
         if (selected == null || selected.isEmpty()) return;
-        new DriveLetterDialog(context, selected, folder.getAbsolutePath(),
-                sel -> {
-                    if (sel.conflict) {
-                        new AlertDialog.Builder(context)
-                                .setTitle(R.string.scan_games_overwrite_letter_title)
-                                .setMessage(context.getString(R.string.scan_games_overwrite_letter_msg, sel.letter + ":"))
-                                .setPositiveButton(android.R.string.ok,
-                                        (d, w) -> runScan(folder, selected, sel.letter))
-                                .setNegativeButton(android.R.string.cancel, null)
-                                .show();
-                    } else {
-                        runScan(folder, selected, sel.letter);
-                    }
-                }).show();
+        runScan(folder, selected, GAMES_DRIVE_LETTER);
     }
 
     private void runScan(File folder, List<Container> targets, char letter) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        prefs.edit().putString(PREF_LAST_LETTER, String.valueOf(letter)).apply();
-
         ProgressDialog progress = new ProgressDialog(context);
         progress.setTitle(R.string.scan_games_progress_title);
         progress.setMessage(context.getString(R.string.scan_games_resolving));
