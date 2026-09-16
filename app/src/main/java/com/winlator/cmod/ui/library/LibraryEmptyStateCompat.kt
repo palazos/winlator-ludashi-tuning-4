@@ -16,16 +16,21 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,12 +51,48 @@ internal fun LibraryRootWithoutEmptyDescription(
     }
 
     val activity = LocalContext.current as? MainActivity
+    val configuration = LocalConfiguration.current
+    val landscape = configuration.screenWidthDp > configuration.screenHeightDp
+
+    // The bottom navigation (Library/Containers/Input Controls/Settings) is hidden
+    // in landscape in favor of a per-screen Compose header. LibraryRoot renders its
+    // own header for that, but this empty-state screen bypasses LibraryRoot entirely,
+    // so without this it left no way to reach Settings (or anything else) while the
+    // library has no shortcuts yet and the device is in landscape.
+    DisposableEffect(activity, landscape) {
+        activity?.setBottomNavigationVisible(!landscape)
+        activity?.setMainToolbarVisible(!landscape)
+        onDispose {
+            val stillOnLibrary = activity?.supportFragmentManager
+                ?.findFragmentById(R.id.FLFragmentContainer) is com.winlator.cmod.ShortcutsFragment
+            if (!stillOnLibrary) {
+                activity?.setBottomNavigationVisible(true)
+                activity?.setMainToolbarVisible(true)
+            }
+        }
+    }
+
     Column(
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 14.dp)
     ) {
+        if (landscape) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Library",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.weight(1f))
+                LibraryTopIcon(Icons.Outlined.Home, true) {}
+                LibraryTopIcon(Icons.Outlined.SportsEsports, false) { activity?.navigateToMainDestination(R.id.main_menu_input_controls) }
+                LibraryTopIcon(Icons.Outlined.Settings, false) { activity?.navigateToMainDestination(R.id.main_menu_settings) }
+                LibraryOrientationMenu(activity)
+            }
+            Spacer(Modifier.height(7.dp))
+        }
         Row(
             Modifier.padding(vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)

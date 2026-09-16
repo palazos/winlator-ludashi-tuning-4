@@ -249,8 +249,10 @@ private fun LibraryLandscapeHeader(
     }
 }
 
+// Internal (not private) so LibraryEmptyStateCompat.kt can reuse it for the
+// landscape empty-state header, keeping the same look as the non-empty Library header.
 @Composable
-private fun LibraryOrientationMenu(activity: MainActivity?) {
+internal fun LibraryOrientationMenu(activity: MainActivity?) {
     var expanded by remember { mutableStateOf(false) }
     var orientationRevision by remember { mutableStateOf(0) }
     val orientationState = remember(activity, orientationRevision) {
@@ -289,8 +291,10 @@ private fun OrientationToggleMenuItem(label: String, checked: Boolean, onClick: 
     )
 }
 
+// Internal (not private) so LibraryEmptyStateCompat.kt can reuse it for the
+// landscape empty-state header, keeping the same look as the non-empty Library header.
 @Composable
-private fun LibraryTopIcon(icon: ImageVector, selected: Boolean, click: () -> Unit) {
+internal fun LibraryTopIcon(icon: ImageVector, selected: Boolean, click: () -> Unit) {
     val whiteTheme = MaterialTheme.colorScheme.background.luminance() > .65f
     val background = if (whiteTheme) Color.Black.copy(if (selected) .90f else .78f)
     else if (selected) Color.White.copy(.16f) else Color.Transparent
