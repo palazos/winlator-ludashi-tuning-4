@@ -88,19 +88,6 @@ tasks.register("prepareKotlinBuildScriptModel"){}
 downloadProton.dependsOn(downloadImageFS)
 preBuild.dependsOn(downloadProton)
 
-// Optional OpenAI key for the "Scan games" AI-assisted shortcut creation feature.
-// Read from local.properties (gitignored) so it never gets committed; empty key
-// makes the feature fall back to the local heuristic resolver.
-def gamesAiKey = ""
-try {
-    def lp = new Properties()
-    def lpFile = rootProject.file('local.properties')
-    if (lpFile.exists()) {
-        lpFile.withInputStream { lp.load(it) }
-        gamesAiKey = lp.getProperty('openai.api.key', '') ?: ''
-    }
-} catch (ignored) {}
-
 android {
     namespace 'com.winlator.cmod'
     // Keep compileSdk from your current config. If you want to match Termux-X11, you could set to 34.
@@ -119,10 +106,6 @@ android {
 
         versionCode 20
         versionName "4.1"
-
-        buildConfigField "String", "GAMES_AI_KEY", "\"" + gamesAiKey + "\""
-        buildConfigField "String", "GAMES_AI_MODEL", "\"gpt-4o-mini\""
-        buildConfigField "String", "GAMES_AI_ENDPOINT", "\"https://api.openai.com/v1/chat/completions\""
 
         // External native build from Winlator
         externalNativeBuild {
@@ -182,7 +165,6 @@ android {
     buildFeatures {
         prefab = true
         compose = true
-        buildConfig = true
     }
 }
 

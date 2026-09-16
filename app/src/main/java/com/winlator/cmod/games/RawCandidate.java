@@ -6,7 +6,7 @@ import java.util.List;
 
 /**
  * A single game folder discovered by {@link GameScanner} together with the
- * .exe files found inside it. Used as input for resolution (AI or heuristic).
+ * .exe files found inside it. Used as input for heuristic resolution.
  */
 public class RawCandidate {
     public final File folder;

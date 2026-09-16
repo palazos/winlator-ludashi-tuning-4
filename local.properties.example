@@ -6,8 +6,3 @@
 #
 # Location of the SDK. This is only used by Gradle.
 sdk.dir=C\:\\Users\\you\\AppData\\Local\\Android\\Sdk
-
-# OpenAI API key used by the in-app "Scan games" feature to resolve which
-# .exe file represents each detected game folder. If left empty the feature
-# falls back to a local heuristic resolver and never reaches the network.
-openai.api.key=

@@ -33,7 +33,7 @@ import java.util.concurrent.Executors;
 /**
  * End-to-end UI flow for the "Scan games" feature:
  * folder picker -> containers picker -> drive letter -> background scan
- * (folder walk + AI/heuristic resolution) -> results checklist -> batch
+ * (folder walk + heuristic resolution) -> results checklist -> batch
  * shortcut creation with per-container drive merge.
  */
 public class ScanGamesController {
@@ -133,9 +133,11 @@ public class ScanGamesController {
                     return;
                 }
 
-                GameScanCache cache = new GameScanCache(context);
-                GameAIClient ai = new GameAIClient();
-                List<GameCandidate> candidates = ai.resolveAll(raws, cache);
+                List<GameCandidate> candidates = new ArrayList<>(raws.size());
+                for (RawCandidate raw : raws) {
+                    GameCandidate c = HeuristicResolver.resolve(raw);
+                    if (c != null) candidates.add(c);
+                }
 
                 ui.post(() -> {
                     progress.dismiss();
@@ -157,12 +159,10 @@ public class ScanGamesController {
             return;
         }
 
-        // Pre-check candidates with confidence >= 0.6 or AI source.
+        // Pre-check candidates the heuristic is fairly confident about.
         for (GameCandidate c : candidates) {
             if (c == null) continue;
-            c.selected = c.source == GameCandidate.Source.AI
-                    || c.source == GameCandidate.Source.CACHE
-                    || c.confidence >= 0.6f;
+            c.selected = c.confidence >= 0.6f;
         }
 
         View root = LayoutInflater.from(context).inflate(R.layout.dialog_scan_results, null);
@@ -247,8 +247,7 @@ public class ScanGamesController {
             GameCandidate c = data.get(position);
             h.title.setText(c.displayName);
             String exeName = c.exe != null ? c.exe.getName() : "?";
-            String src = c.source != null ? c.source.name().toLowerCase() : "?";
-            h.subtitle.setText(exeName + "  ·  " + src + " · " + (int) (c.confidence * 100) + "%");
+            h.subtitle.setText(exeName + "  ·  " + (int) (c.confidence * 100) + "%");
             h.checkBox.setOnCheckedChangeListener(null);
             h.checkBox.setChecked(c.selected);
             h.checkBox.setOnCheckedChangeListener((b, isChecked) -> c.selected = isChecked);

@@ -6,10 +6,10 @@ import java.util.List;
 
 /**
  * One game folder detected during a scan with its resolved entry point.
- * Built from {@link RawCandidate} after either AI or heuristic resolution.
+ * Built from {@link RawCandidate} after heuristic resolution.
  */
 public class GameCandidate {
-    public enum Source { AI, HEURISTIC, CACHE, MANUAL }
+    public enum Source { HEURISTIC }
 
     public String displayName;
     public File folder;

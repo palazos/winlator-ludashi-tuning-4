@@ -1,17 +1,14 @@
 package com.winlator.cmod.games;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
 /**
- * Picks a "best effort" main executable for a game folder when no AI
- * resolution is available. Used as a silent fallback by
- * {@link GameAIClient} when the network call fails or the API key is not
- * configured.
+ * Picks a "best effort" main executable for a game folder using simple
+ * signals: blacklisted filename substrings, typical binary folder names
+ * and exe size.
  */
 public final class HeuristicResolver {
     private HeuristicResolver() {}
@@ -101,24 +98,5 @@ public final class HeuristicResolver {
         n = n.replaceAll("(?i)\\b(v\\d+|repack|setup|installer|portable|goty|edition)\\b", "");
         n = n.replaceAll("\\s+", " ").trim();
         return n.isEmpty() ? folderName : n;
-    }
-
-    /**
-     * @return true if the file is in the candidate list (defensive check
-     *   used when validating an AI-supplied exe filename).
-     */
-    public static File matchExeByName(List<RawCandidate.ExeEntry> exes, String basename) {
-        if (basename == null) return null;
-        String target = basename.trim().toLowerCase(Locale.ROOT);
-        if (target.isEmpty()) return null;
-        for (RawCandidate.ExeEntry e : exes) {
-            if (e.file.getName().toLowerCase(Locale.ROOT).equals(target)) return e.file;
-            if (e.relativePath.toLowerCase(Locale.ROOT).equals(target)) return e.file;
-        }
-        // last attempt: endsWith
-        for (RawCandidate.ExeEntry e : exes) {
-            if (e.relativePath.toLowerCase(Locale.ROOT).endsWith(target)) return e.file;
-        }
-        return null;
     }
 }
