@@ -1,18 +1,18 @@
 package com.winlator.cmod.games;
 
 import android.content.Context;
-import android.view.LayoutInflater;
+import android.util.SparseBooleanArray;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.container.Container;
+import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contents.ContentsManager;
+import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.WineInfo;
 
@@ -23,9 +23,9 @@ import java.util.List;
  * Multi-select dialog that lets the user pick which containers should
  * receive the new shortcuts.
  *
- * <p>Uses a custom {@link ListView} instead of
- * {@code AlertDialog.setMultiChoiceItems} because {@code setMessage} and
- * {@code setMultiChoiceItems} together hide the list on many devices.</p>
+ * <p>Built on top of {@link ContentDialog} - the same rounded, theme-aware
+ * dialog chrome used everywhere else in the app - instead of a plain
+ * {@code AlertDialog}, so it matches the rest of the UI.</p>
  */
 public class ContainerMultiSelectDialog {
     private final Context context;
@@ -42,11 +42,7 @@ public class ContainerMultiSelectDialog {
 
     public void show() {
         if (containers.isEmpty()) {
-            new AlertDialog.Builder(context)
-                    .setTitle(R.string.scan_games_pick_containers)
-                    .setMessage(R.string.no_items_to_display)
-                    .setPositiveButton(android.R.string.ok, null)
-                    .show();
+            ContentDialog.alert(context, R.string.no_items_to_display, null);
             return;
         }
 
@@ -57,38 +53,45 @@ public class ContainerMultiSelectDialog {
         contentsManager.syncContents();
 
         String[] names = new String[containers.size()];
-        final boolean[] checked = new boolean[containers.size()];
         for (int i = 0; i < containers.size(); i++) {
-            Container container = containers.get(i);
-            WineInfo wineInfo = WineInfo.fromIdentifier(context, contentsManager, container.getWineVersion());
-            names[i] = wineInfo.toString();
-            checked[i] = true;
+            WineInfo wineInfo = WineInfo.fromIdentifier(context, contentsManager, containers.get(i).getWineVersion());
+            names[i] = fullWineLabel(wineInfo);
         }
 
-        View content = LayoutInflater.from(context).inflate(R.layout.dialog_container_multiselect, null);
-        TextView message = content.findViewById(R.id.TVMessage);
-        message.setText(R.string.scan_games_pick_containers_msg);
+        ContentDialog dialog = new ContentDialog(context);
+        dialog.setTitle(R.string.scan_games_pick_containers);
+        dialog.setMessage(R.string.scan_games_pick_containers_msg);
 
-        ListView listView = content.findViewById(R.id.ListView);
-        listView.setAdapter(new ArrayAdapter<>(context,
-                android.R.layout.simple_list_item_multiple_choice, names));
-        for (int i = 0; i < checked.length; i++) {
-            listView.setItemChecked(i, checked[i]);
-        }
-        listView.setOnItemClickListener((parent, view, position, id) ->
-                checked[position] = listView.isItemChecked(position));
+        ListView listView = dialog.findViewById(R.id.ListView);
+        listView.getLayoutParams().width = AppUtils.getPreferredDialogWidth(context);
+        listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+        listView.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_list_item_multiple_choice, names));
+        listView.setVisibility(View.VISIBLE);
+        for (int i = 0; i < names.length; i++) listView.setItemChecked(i, true);
 
-        new AlertDialog.Builder(context)
-                .setTitle(R.string.scan_games_pick_containers)
-                .setView(content)
-                .setPositiveButton(android.R.string.ok, (d, w) -> {
-                    List<Container> selected = new ArrayList<>();
-                    for (int i = 0; i < containers.size(); i++) {
-                        if (checked[i]) selected.add(containers.get(i));
-                    }
-                    if (onPicked != null) onPicked.call(selected);
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+        dialog.setOnConfirmCallback(() -> {
+            List<Container> selected = new ArrayList<>();
+            SparseBooleanArray checkedItemPositions = listView.getCheckedItemPositions();
+            for (int i = 0; i < containers.size(); i++) {
+                if (checkedItemPositions.get(i)) selected.add(containers.get(i));
+            }
+            if (onPicked != null) onPicked.call(selected);
+        });
+
+        dialog.show();
+    }
+
+    /**
+     * Builds a full runtime label including the architecture (e.g. "Proton
+     * 9 arm64ec"), since {@link WineInfo#toString()} omits it and several
+     * containers can otherwise show up with the exact same short name
+     * (e.g. "Proton 9") even though they run different architectures.
+     * Mirrors the formatting used by the Library's environment label.
+     */
+    private static String fullWineLabel(WineInfo wineInfo) {
+        String version = wineInfo.fullVersion();
+        if (version.endsWith(".0")) version = version.substring(0, version.length() - 2);
+        String typeLabel = "proton".equalsIgnoreCase(wineInfo.type) ? "Proton " : "Wine ";
+        return typeLabel + version + " " + wineInfo.getArch();
     }
 }

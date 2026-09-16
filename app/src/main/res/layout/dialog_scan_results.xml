@@ -2,19 +2,33 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="8dp">
+    android:orientation="vertical">
+
+    <!--
+        The confirm action lives here, pinned to the top-right corner, instead
+        of ContentDialog's own bottom button bar: everything here sits inside
+        the FrameLayout's fixed width, so it can't get pushed off-screen like
+        a weighted row in the bottom bar could.
+    -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical|end"
+        android:layout_marginBottom="10dp">
+
+        <Button
+            android:id="@+id/BTApply"
+            style="@style/ButtonPositive"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:text="@string/scan_games_create" />
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/RecyclerView"
         android:layout_width="match_parent"
-        android:layout_height="360dp" />
-
-    <TextView
-        android:id="@+id/TVFooter"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:textSize="12sp"
-        android:textStyle="italic" />
+        android:layout_height="320dp" />
 </LinearLayout>

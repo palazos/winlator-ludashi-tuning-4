@@ -356,8 +356,8 @@
     <string name="scan_games_resolving">Identifying games, this can take a moment…</string>
     <string name="scan_games_no_results">No games were found in the selected folder.</string>
     <string name="scan_games_results_title">Games found</string>
-    <string name="scan_games_create">Create shortcuts</string>
-    <string name="scan_games_disclosure">High-confidence matches are pre-selected; review the rest before creating shortcuts.</string>
+    <string name="scan_games_create">Add Games</string>
+    <string name="scan_games_choose_exe">Choose executable</string>
     <string name="scan_games_summary">%1$d shortcut(s) created across %2$d container(s).</string>
     <string name="enable_file_provider">Enable File Provider</string>
     <string name="take_effect_next_startup">This option will take effect at the next startup.</string>
